@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investigasi IKP & RCA | alfan-23</title>
+    
+    <script>
+        (function() {
+            const allowedDomain = "alfan-23.github.io";
+            const currentDomain = window.location.hostname;
+            if (currentDomain !== allowedDomain && currentDomain !== "localhost" && currentDomain !== "127.0.0.1") {
+                document.documentElement.innerHTML = `
+                    <div style="font-family:sans-serif; text-align:center; padding:50px; background:#1e293b; color:#38bdf8; height:100vh; display:flex; flex-direction:column; justify-content:center;">
+                        <h2>⚠️ LISENSI TIDAK VALID</h2>
+                        <p>Akses modul Investigasi IKP hanya diizinkan melalui Portal Administrasi Kesehatan Resmi.</p>
+                    </div>`;
+                throw new Error("Unauthorized Access");
+            }
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .form-section { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .section-title { font-size: 0.875rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .label-custom { display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem; }
+        .input-custom { width: 100%; border-radius: 0.5rem; border: 1px solid #cbd5e1; padding: 0.6rem 0.75rem; font-size: 0.875rem; transition: all 0.2s; }
+        .input-custom:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1); }
+        .grading-btn { border: 2px solid transparent; opacity: 0.6; transition: all 0.2s; }
+        .grading-btn.active { opacity: 1; border-color: #1e293b; transform: scale(1.05); font-weight: bold; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .print-area { padding: 0; background: white; }
+            .form-section { border: none; padding: 0; margin-bottom: 2rem; }
+            @page { size: A4 portrait; margin: 1.5cm; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="toast" class="fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm font-bold flex items-center gap-2"></div>
+
+    <div class="max-w-4xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Form Investigasi Insiden (IKP)</h1>
+                <p class="text-sm text-slate-500">Root Cause Analysis (RCA) & Tindak Lanjut</p>
+            </div>
+            <div id="api-status" class="flex items-center gap-2 text-[10px] font-bold px-3 py-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-200">
+                <i class="fas fa-circle-notch animate-spin"></i> MENUNGGU KONEKSI PORTAL
+            </div>
+        </div>
+
+        <form id="ikp-form" class="print-area">
+            <div class="form-section">
+                <h2 class="section-title"><i class="fas fa-file-medical text-rose-500"></i> I. Data Insiden</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="label-custom">Jenis Insiden</label>
+                        <select id="jenis_insiden" class="input-custom font-semibold">
+                            <option value="KPC">Kondisi Potensial Cedera (KPC)</option>
+                            <option value="KNC">Kejadian Nyaris Cedera (KNC)</option>
+                            <option value="KTC">Kejadian Tidak Cedera (KTC)</option>
+                            <option value="KTD">Kejadian Tidak Diharapkan (KTD)</option>
+                            <option value="Sentinel">Kejadian Sentinel</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-custom">Waktu Kejadian</label>
+                        <input type="datetime-local" id="waktu_kejadian" class="input-custom">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="label-custom">Unit/Lokasi Kejadian</label>
+                        <input type="text" id="lokasi_kejadian" class="input-custom" placeholder="Contoh: Ruang Farmasi, Laboratorium, Pustu...">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="label-custom">Kronologi Singkat Kejadian</label>
+                        <textarea id="kronologi" rows="3" class="input-custom" placeholder="Jelaskan secara faktual apa yang terjadi..."></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 no-print">
+                    <label class="label-custom mb-2">Grading Risiko (Berdasarkan Matriks)</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button type="button" onclick="setGrading('Biru')" id="btn-Biru" class="grading-btn bg-blue-500 text-white py-2 rounded-lg text-sm">Biru (Rendah)</button>
+                        <button type="button" onclick="setGrading('Hijau')" id="btn-Hijau" class="grading-btn bg-green-500 text-white py-2 rounded-lg text-sm">Hijau (Sedang)</button>
+                        <button type="button" onclick="setGrading('Kuning')" id="btn-Kuning" class="grading-btn bg-yellow-400 text-slate-800 py-2 rounded-lg text-sm">Kuning (Tinggi)</button>
+                        <button type="button" onclick="setGrading('Merah')" id="btn-Merah" class="grading-btn bg-red-600 text-white py-2 rounded-lg text-sm">Merah (Ekstrim)</button>
+                    </div>
+                    <input type="hidden" id="grading_hasil" value="">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title"><i class="fas fa-network-wired text-indigo-500"></i> II. Analisis Akar Masalah (5 Whys)</h2>
+                
+                <div class="no-print bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-5 flex items-start gap-4">
+                    <div class="text-indigo-600 mt-1"><i class="fas fa-brain text-2xl"></i></div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-indigo-900 text-sm mb-1">Bantuan Analisis AI</h4>
+                        <p class="text-xs text-indigo-700 mb-3">Sistem akan membaca kronologi di atas dan menyusun hipotesis 5 Whys (Mengapa) secara logis.</p>
+                        <button type="button" id="ai-rca-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded shadow transition-all flex items-center gap-2">
+                            <i class="fas fa-magnifying-glass-chart"></i> Analisis Kronologi & Susun 5-Whys
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex gap-3 items-center">
+                        <span class="font-bold text-slate-400 text-xl w-6">W1</span>
+                        <input type="text" id="why_1" class="input-custom border-indigo-100" placeholder="Mengapa insiden ini terjadi?">
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <span class="font-bold text-slate-400 text-xl w-6">W2</span>
+                        <input type="text" id="why_2" class="input-custom border-indigo-200" placeholder="Mengapa [jawaban W1] terjadi?">
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <span class="font-bold text-slate-400 text-xl w-6">W3</span>
+                        <input type="text" id="why_3" class="input-custom border-indigo-300" placeholder="Mengapa [jawaban W2] terjadi?">
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <span class="font-bold text-slate-400 text-xl w-6">W4</span>
+                        <input type="text" id="why_4" class="input-custom border-indigo-400" placeholder="Mengapa [jawaban W3] terjadi?">
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <span class="font-bold text-slate-400 text-xl w-6">W5</span>
+                        <input type="text" id="why_5" class="input-custom border-indigo-500" placeholder="Mengapa [jawaban W4] terjadi? (Akar Masalah)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title"><i class="fas fa-clipboard-check text-emerald-500"></i> III. Tindak Lanjut & Rekomendasi</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="label-custom">Akar Masalah Utama (Root Cause)</label>
+                        <input type="text" id="akar_masalah" class="input-custom font-bold text-rose-700 bg-rose-50" placeholder="Kesimpulan dari W5...">
+                    </div>
+                    <div>
+                        <label class="label-custom">Rekomendasi Perbaikan Sistem</label>
+                        <textarea id="rekomendasi" rows="3" class="input-custom" placeholder="Tindakan apa yang harus dilakukan agar tidak terulang?"></textarea>
+                    </div>
+                    <div>
+                        <label class="label-custom">Penanggung Jawab Tindak Lanjut</label>
+                        <input type="text" id="pj_tindak_lanjut" class="input-custom" placeholder="Nama / Unit">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-3 no-print">
+                <button type="button" id="save-btn" class="flex-1 bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-cloud-arrow-up"></i> Simpan Laporan ke Portal
+                </button>
+                <button type="button" onclick="window.print()" class="flex-1 bg-rose-500 text-white font-bold py-3 rounded-xl hover:bg-rose-600 transition flex items-center justify-center gap-2 shadow-lg shadow-rose-200">
+                    <i class="fas fa-print"></i> Cetak Laporan Investigasi
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // --- INTEGRASI PORTAL ---
+        let CURRENT_API_KEY = "";
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'SET_API_KEY') {
+                CURRENT_API_KEY = event.data.key;
+                const status = document.getElementById('api-status');
+                status.className = "flex items-center gap-2 text-[10px] font-bold px-3 py-1.5 rounded-full border bg-green-50 text-green-700 border-green-200";
+                status.innerHTML = '<i class="fas fa-link"></i> PORTAL TERHUBUNG';
+            }
+        });
+
+        function laporLimitPortal() {
+            window.parent.postMessage({ type: 'API_ERROR', code: 429 }, '*');
+        }
+
+        function showToast(msg, type = 'info') {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = `fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl z-50 text-sm font-bold flex items-center gap-2 transition-all transform translate-y-0 opacity-100 ${type === 'error' ? 'bg-red-600 text-white' : (type === 'success' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-white')}`;
+            setTimeout(() => { t.className = "fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl translate-y-20 opacity-0 transition-all duration-300"; }, 3000);
+        }
+
+        // --- GRADING UI ---
+        function setGrading(warna) {
+            document.getElementById('grading_hasil').value = warna;
+            const btns = document.querySelectorAll('.grading-btn');
+            btns.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${warna}`).classList.add('active');
+        }
+
+        // --- LOGIKA AI (RCA 5 WHYS) ---
+        document.getElementById('ai-rca-btn').addEventListener('click', async () => {
+            const kronologi = document.getElementById('kronologi').value.trim();
+            const jenis = document.getElementById('jenis_insiden').value;
+            const lokasi = document.getElementById('lokasi_kejadian').value.trim();
+            
+            if (!kronologi) return showToast("Harap isi kronologi kejadian terlebih dahulu!", "error");
+            if (!CURRENT_API_KEY) return showToast("API Key belum disalurkan dari Portal.", "error");
+
+            const btn = document.getElementById('ai-rca-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Melakukan Root Cause Analysis...';
+
+            try {
+                const prompt = `Anda adalah Investigator Keselamatan Pasien (Patient Safety). Lakukan analisis "5 Whys" berdasarkan laporan insiden berikut:
+                - Jenis: ${jenis}
+                - Lokasi: ${lokasi || 'Tidak disebutkan'}
+                - Kronologi: "${kronologi}"
+                
+                Tarik kesimpulan akar masalah dan berikan rekomendasi perbaikan sistem (jangan menyalahkan individu).
+                
+                Output harus HANYA dalam format JSON:
+                {
+                  "w1": "Mengapa...",
+                  "w2": "Mengapa...",
+                  "w3": "Mengapa...",
+                  "w4": "Mengapa...",
+                  "w5": "Mengapa... (Akar masalah sesungguhnya)",
+                  "akar_masalah": "Kesimpulan akar masalah yang sistemik",
+                  "rekomendasi": "Tindakan korektif/preventif untuk perbaikan sistem"
+                }`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CURRENT_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
+                });
+
+                if (response.status === 429) {
+                    laporLimitPortal();
+                    throw new Error("Limit API tercapai, mencoba Key cadangan. Klik tombol sekali lagi.");
+                }
+
+                const resData = await response.json();
+                const textOutput = resData.candidates[0].content.parts[0].text;
+                
+                const jsonMatch = textOutput.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const data = JSON.parse(jsonMatch[0]);
+                    document.getElementById('why_1').value = data.w1 || '';
+                    document.getElementById('why_2').value = data.w2 || '';
+                    document.getElementById('why_3').value = data.w3 || '';
+                    document.getElementById('why_4').value = data.w4 || '';
+                    document.getElementById('why_5').value = data.w5 || '';
+                    document.getElementById('akar_masalah').value = data.akar_masalah || '';
+                    document.getElementById('rekomendasi').value = data.rekomendasi || '';
+                    showToast("Analisis RCA 5-Whys berhasil disusun AI!", "success");
+                } else {
+                    throw new Error("Format AI tidak sesuai (Bukan JSON).");
+                }
+
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magnifying-glass-chart"></i> Analisis Kronologi & Susun 5-Whys';
+            }
+        });
+
+        // --- SIMPAN KE PORTAL ---
+        document.getElementById('save-btn').addEventListener('click', () => {
+            const krono = document.getElementById('kronologi').value;
+            if(!krono) return showToast("Laporan masih kosong.", "error");
+            
+            const docData = {
+                jenis: document.getElementById('jenis_insiden').value,
+                waktu: document.getElementById('waktu_kejadian').value,
+                lokasi: document.getElementById('lokasi_kejadian').value,
+                kronologi: krono,
+                grading: document.getElementById('grading_hasil').value,
+                rca: {
+                    w1: document.getElementById('why_1').value,
+                    w2: document.getElementById('why_2').value,
+                    w3: document.getElementById('why_3').value,
+                    w4: document.getElementById('why_4').value,
+                    w5: document.getElementById('why_5').value
+                },
+                akar_masalah: document.getElementById('akar_masalah').value,
+                rekomendasi: document.getElementById('rekomendasi').value,
+                pj: document.getElementById('pj_tindak_lanjut').value
+            };
+
+            window.parent.postMessage({
+                type: 'SAVE_DOCUMENT',
+                payload: {
+                    fasyankes: sessionStorage.getItem('jenisFasyankes') || 'Puskesmas',
+                    unitKerja: sessionStorage.getItem('unitKerja') || 'Tim Keselamatan Pasien',
+                    judul: `Investigasi IKP (${docData.jenis}) - ${docData.lokasi}`,
+                    konten: JSON.stringify(docData)
+                }
+            }, '*');
+
+            showToast("Laporan Investigasi diteruskan ke Database Pusat.", "success");
+        });
+    </script>
+</body>
+</html>

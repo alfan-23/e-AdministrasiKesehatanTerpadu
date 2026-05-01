@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil Indikator Mutu Prioritas (IMP) | alfan-23</title>
+    
+    <script>
+        (function() {
+            const allowedDomain = "alfan-23.github.io";
+            const currentDomain = window.location.hostname;
+            if (currentDomain !== allowedDomain && currentDomain !== "localhost" && currentDomain !== "127.0.0.1") {
+                document.documentElement.innerHTML = `
+                    <div style="font-family:sans-serif; text-align:center; padding:50px; background:#1e293b; color:#38bdf8; height:100vh; display:flex; flex-direction:column; justify-content:center;">
+                        <h2>⚠️ LISENSI TIDAK VALID</h2>
+                        <p>Akses modul Profil IMP hanya diizinkan melalui Portal Administrasi Kesehatan Resmi.</p>
+                    </div>`;
+                throw new Error("Unauthorized Access");
+            }
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .form-section { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .section-title { font-size: 0.875rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .label-custom { display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem; }
+        .input-custom { width: 100%; border-radius: 0.5rem; border: 1px solid #cbd5e1; padding: 0.6rem 0.75rem; font-size: 0.875rem; transition: all 0.2s; }
+        .input-custom:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1); }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .print-area { padding: 0; background: white; }
+            .form-section { border: none; padding: 0; margin-bottom: 2rem; }
+            @page { size: F4; margin: 2cm; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="toast" class="fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm font-bold flex items-center gap-2"></div>
+
+    <div class="max-w-5xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Profil Indikator Mutu Prioritas (IMP)</h1>
+                <p class="text-sm text-slate-500">Puskesmas & Fasilitas Kesehatan Primer</p>
+            </div>
+            <div id="api-status" class="flex items-center gap-2 text-[10px] font-bold px-3 py-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-200">
+                <i class="fas fa-circle-notch animate-spin"></i> MENUNGGU KONEKSI PORTAL
+            </div>
+        </div>
+
+        <form id="imp-form" class="print-area">
+            <div class="form-section">
+                <h2 class="section-title"><i class="fas fa-id-card text-sky-500"></i> I. Judul & Dasar Pemikiran</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="label-custom">Judul Indikator</label>
+                        <input type="text" id="judul_indikator" class="input-custom font-bold" placeholder="Contoh: Kepatuhan Identifikasi Pasien">
+                    </div>
+                    <div>
+                        <label class="label-custom">Dasar Pemikiran</label>
+                        <textarea id="dasar_pemikiran" rows="3" class="input-custom" placeholder="Sesuai Peraturan Menteri Kesehatan atau masalah mutu di unit..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title"><i class="fas fa-chart-pie text-sky-500"></i> II. Dimensi & Formula</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="label-custom">Dimensi Mutu</label>
+                        <select id="dimensi_mutu" class="input-custom">
+                            <option value="Efektif">Efektif</option>
+                            <option value="Keselamatan">Keselamatan</option>
+                            <option value="Orientasi Pasien">Orientasi Pasien</option>
+                            <option value="Tepat Waktu">Tepat Waktu</option>
+                            <option value="Efisien">Efisien</option>
+                            <option value="Adil">Adil</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-custom">Tipe Indikator</label>
+                        <select id="tipe_indikator" class="input-custom">
+                            <option value="Input">Input</option>
+                            <option value="Proses">Proses</option>
+                            <option value="Output">Output</option>
+                            <option value="Outcome">Outcome</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="label-custom">Numerator (Pembilang)</label>
+                        <input type="text" id="numerator" class="input-custom" placeholder="Jumlah pasien yang diidentifikasi dengan benar">
+                    </div>
+                    <div>
+                        <label class="label-custom">Denominator (Penyebut)</label>
+                        <input type="text" id="denominator" class="input-custom" placeholder="Jumlah seluruh pasien yang dilayani">
+                    </div>
+                    <div>
+                        <label class="label-custom">Target Pencapaian (%)</label>
+                        <input type="number" id="target" class="input-custom w-32" value="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title"><i class="fas fa-microscope text-sky-500"></i> III. Metodologi Pengumpulan Data</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="label-custom">Sumber Data</label>
+                        <input type="text" id="sumber_data" class="input-custom" placeholder="Rekam Medis, Catatan Register, dll">
+                    </div>
+                    <div>
+                        <label class="label-custom">Periode Pelaporan</label>
+                        <select id="periode" class="input-custom">
+                            <option value="Bulanan">Bulanan</option>
+                            <option value="Triwulan">Triwulan</option>
+                            <option value="Semester">Semester</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="label-custom">Kriteria Inklusi & Eksklusi</label>
+                        <textarea id="kriteria" rows="2" class="input-custom" placeholder="Inklusi: Semua pasien rawat jalan..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="no-print bg-sky-900 rounded-2xl p-6 text-white mb-6 shadow-lg shadow-sky-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 bg-sky-400 rounded-full flex items-center justify-center text-sky-900">
+                        <i class="fas fa-robot text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold">Asisten Profil IMP</h3>
+                        <p class="text-xs text-sky-200">Bantu saya melengkapi profil ini secara otomatis.</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-query" class="flex-1 bg-sky-800 border-none rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-sky-400 outline-none" placeholder="Ketik topik (misal: Antrean Pendaftaran)...">
+                    <button type="button" id="ai-generate-btn" class="bg-sky-400 hover:bg-sky-300 text-sky-900 font-bold px-6 py-2 rounded-lg transition-all flex items-center gap-2">
+                        <i class="fas fa-wand-magic-sparkles"></i> Generate
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-3 no-print">
+                <button type="button" id="save-btn" class="flex-1 bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i> Simpan ke Portal
+                </button>
+                <button type="button" onclick="window.print()" class="flex-1 bg-sky-500 text-white font-bold py-3 rounded-xl hover:bg-sky-600 transition flex items-center justify-center gap-2 shadow-lg shadow-sky-100">
+                    <i class="fas fa-print"></i> Cetak Dokumen Profil
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // --- INTEGRASI PORTAL ---
+        let CURRENT_API_KEY = "";
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'SET_API_KEY') {
+                CURRENT_API_KEY = event.data.key;
+                const status = document.getElementById('api-status');
+                status.className = "flex items-center gap-2 text-[10px] font-bold px-3 py-1.5 rounded-full border bg-green-50 text-green-700 border-green-200";
+                status.innerHTML = '<i class="fas fa-link"></i> PORTAL TERHUBUNG';
+            }
+        });
+
+        function laporLimitPortal() {
+            window.parent.postMessage({ type: 'API_ERROR', code: 429 }, '*');
+        }
+
+        // --- UI UTILITY ---
+        function showToast(msg, type = 'info') {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = `fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl z-50 text-sm font-bold flex items-center gap-2 transition-all transform translate-y-0 opacity-100 ${type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
+            setTimeout(() => { t.className = "fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl translate-y-20 opacity-0 transition-all duration-300"; }, 3000);
+        }
+
+        // --- LOGIKA AI (GEMINI) ---
+        document.getElementById('ai-generate-btn').addEventListener('click', async () => {
+            const query = document.getElementById('ai-query').value.trim();
+            if (!query) return showToast("Masukkan topik indikator!", "error");
+            if (!CURRENT_API_KEY) return showToast("API Key belum disalurkan dari Portal.", "error");
+
+            const btn = document.getElementById('ai-generate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            try {
+                const prompt = `Anda adalah konsultan Akreditasi Puskesmas. Buat draf Profil Indikator Mutu Prioritas (IMP) untuk topik: "${query}". 
+                WAJIB menggunakan istilah "Indikator Mutu Prioritas (IMP)".
+                Output harus JSON: { "judul": "", "pemikiran": "", "dimensi": "", "tipe": "", "numerator": "", "denominator": "", "target": 100, "sumber": "", "periode": "", "kriteria": "" }`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CURRENT_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
+                });
+
+                if (response.status === 429) {
+                    laporLimitPortal();
+                    throw new Error("Limit tercapai, sistem sedang mencoba Key cadangan. Klik sekali lagi.");
+                }
+
+                const resData = await response.json();
+                const data = JSON.parse(resData.candidates[0].content.parts[0].text);
+
+                document.getElementById('judul_indikator').value = data.judul;
+                document.getElementById('dasar_pemikiran').value = data.pemikiran;
+                document.getElementById('dimensi_mutu').value = data.dimensi;
+                document.getElementById('tipe_indikator').value = data.tipe;
+                document.getElementById('numerator').value = data.numerator;
+                document.getElementById('denominator').value = data.denominator;
+                document.getElementById('target').value = data.target;
+                document.getElementById('sumber_data').value = data.sumber;
+                document.getElementById('periode').value = data.periode;
+                document.getElementById('kriteria').value = data.kriteria;
+
+                showToast("Profil IMP berhasil disusun AI!");
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate';
+            }
+        });
+
+        // --- SIMPAN KE PORTAL ---
+        document.getElementById('save-btn').addEventListener('click', () => {
+            const docData = {
+                judul: document.getElementById('judul_indikator').value,
+                dasar: document.getElementById('dasar_pemikiran').value,
+                target: document.getElementById('target').value,
+                numerator: document.getElementById('numerator').value,
+                denominator: document.getElementById('denominator').value
+            };
+
+            window.parent.postMessage({
+                type: 'SAVE_DOCUMENT',
+                payload: {
+                    fasyankes: sessionStorage.getItem('jenisFasyankes') || 'Puskesmas',
+                    unitKerja: sessionStorage.getItem('unitKerja') || 'Unit Mutu',
+                    judul: `Profil IMP: ${docData.judul || 'Tanpa Judul'}`,
+                    konten: JSON.stringify(docData)
+                }
+            }, '*');
+
+            showToast("Data dikirim ke Database Portal.");
+        });
+    </script>
+</body>
+</html>

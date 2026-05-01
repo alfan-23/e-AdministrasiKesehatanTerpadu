@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI SOP Generator (Integrasi Portal)</title>
+    
+    <script>
+        (function() {
+            const allowedDomain = "alfan-23.github.io";
+            const currentDomain = window.location.hostname;
+            if (currentDomain !== allowedDomain && currentDomain !== "localhost" && currentDomain !== "127.0.0.1") {
+                document.documentElement.innerHTML = `
+                    <div style="font-family:sans-serif; text-align:center; padding:50px; background:#1e293b; color:#38bdf8; height:100vh; display:flex; flex-direction:column; justify-content:center;">
+                        <h2>⚠️ LISENSI TIDAK VALID</h2>
+                        <p>Akses modul ini hanya diizinkan melalui Portal Administrasi Kesehatan Resmi.</p>
+                    </div>`;
+                throw new Error("Unauthorized Access");
+            }
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.1/mammoth.browser.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .form-label { display: block; font-weight: 600; color: #374151; margin-bottom: 0.35rem; font-size: 0.875rem; }
+        .form-input, .form-textarea { width: 100%; border-radius: 0.5rem; border: 1px solid #cbd5e1; padding: 0.6rem 0.75rem; transition: all 0.2s; background-color: #f8fafc; font-size: 0.875rem; }
+        .form-input:focus, .form-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); background-color: white; }
+        .remove-btn { background-color: #fee2e2; color: #ef4444; border-radius: 9999px; width: 1.75rem; height: 1.75rem; flex-shrink: 0; transition: all 0.2s; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .remove-btn:hover { background-color: #ef4444; color: white; }
+        .add-btn { background-color: #f0fdfa; color: #0d9488; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background-color 0.2s; border: 1px dashed #99f6e4; cursor: pointer; }
+        .add-btn:hover { background-color: #ccfbf1; border-color: #5eead4; }
+        
+        /* Area Pratinjau Kertas Folio (F4) */
+        #sop-preview-container { display: none; width: 100%; background: #cbd5e1; padding: 40px 20px; }
+        .folio-paper { background: white; width: 215.9mm; min-height: 330.2mm; padding: 2cm 2cm; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.15); font-family: 'Arial', sans-serif; color: black; line-height: 1.5; font-size: 11pt; }
+        
+        /* Tipografi Dokumen Resmi SOP */
+        .sop-header-table { width: 100%; border-collapse: collapse; border: 2px solid black; margin-bottom: 20px; }
+        .sop-header-table td { border: 1px solid black; padding: 6px 10px; vertical-align: middle; }
+        .sop-header-table .logo-cell { width: 25%; text-align: center; font-weight: bold; }
+        .sop-header-table .title-cell { text-align: center; font-weight: bold; font-size: 13pt; text-transform: uppercase;}
+        .sop-header-table .meta-cell { font-size: 10pt; }
+        .sop-section-title { font-weight: bold; font-size: 11pt; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase;}
+        .sop-content { padding-left: 0; text-align: justify; }
+        
+        /* Penomoran List Fix */
+        .sop-content ol { padding-left: 1.5rem; list-style-type: decimal; margin-bottom: 0.5rem; }
+        .sop-content ul { padding-left: 1.5rem; list-style-type: disc; margin-bottom: 0.5rem; }
+        .sop-content li { margin-bottom: 0.35rem; padding-left: 0.25rem; }
+        .sop-content table { width: 100%; border-collapse: collapse; border: 1px solid black; margin-top: 10px; margin-bottom: 10px;}
+        .sop-content th, .sop-content td { border: 1px solid black; padding: 6px; text-align: left; }
+        .sop-content thead { background-color: #f1f5f9; font-weight: bold;}
+
+        /* Flowchart Styles */
+        .flowchart { display: flex; flex-direction: column; align-items: center; font-family: 'Courier New', monospace; padding: 1rem 0; }
+        .flowchart-shape { border: 2px solid #1f2937; padding: 0.5rem 1rem; text-align: center; margin: 0 auto; background-color: white; border-radius: 4px;}
+        .flowchart-decision { transform: rotate(45deg); width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 0;}
+        .flowchart-decision-text { transform: rotate(-45deg); font-size: 9pt;}
+        .flowchart-arrow { text-align: center; margin: 0.2rem 0; font-size: 1.2rem; }
+        .flowchart-branch-container { display: flex; justify-content: space-around; width: 100%; align-items: flex-start; margin: 0.5rem 0;}
+        .flowchart-branch { display: flex; flex-direction: column; align-items: center; width: 45%; }
+        .branch-label { font-weight: bold; margin-bottom: 0.2rem; font-size: 8pt;}
+
+        /* PENGATURAN CETAK (PRINT) */
+        @media print {
+            body { background: white; padding: 0; margin: 0;}
+            .no-print { display: none !important; }
+            #sop-preview-container { padding: 0; background: none; display: block !important; }
+            .folio-paper { box-shadow: none; margin: 0; width: 100%; min-height: auto; padding: 0; }
+            @page { size: 215.9mm 330.2mm; margin: 2cm; }
+            table, tr, td, th, li, .flowchart-shape { page-break-inside: avoid; }
+            .sop-section-title { page-break-after: avoid; }
+            .sop-content { page-break-before: avoid; }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <div id="custom-toast" class="fixed bottom-4 right-4 px-6 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 font-medium text-sm flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message"></span>
+    </div>
+
+    <main class="flex-1 w-full flex flex-col items-center">
+        
+        <div class="w-full max-w-5xl p-6 lg:p-8 no-print shrink-0">
+            <form id="sop-form" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-8">
+                
+                <div class="flex items-center justify-between border-b pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">SOP Generator Terintegrasi</h2>
+                        <p class="text-xs text-slate-500">Standar Akreditasi & Integrasi Layanan Primer (ILP)</p>
+                    </div>
+                    <div id="api-status-badge" class="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border shadow-sm bg-amber-50 text-amber-600 border-amber-200">
+                        <i class="fas fa-satellite-dish animate-pulse"></i> Menunggu Kunci API dari Portal...
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4"><i class="fas fa-hospital-user mr-2"></i>1. Identitas Fasyankes</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div class="lg:col-span-2"><label class="form-label">Nama Fasyankes (Kop)</label><input type="text" id="fasyankes" class="form-input font-semibold"></div>
+                        <div><label class="form-label">Nama Kepala Fasyankes</label><input type="text" id="kepala" class="form-input"></div>
+                        <div><label class="form-label">No. Dokumen</label><input type="text" id="no-dokumen" class="form-input font-mono" placeholder="SOP/UKP/..."></div>
+                        <div><label class="form-label">No. Revisi</label><input type="text" id="no-revisi" class="form-input font-mono" value="00"></div>
+                        <div><label class="form-label">Tanggal Terbit</label><input type="date" id="tgl-terbit" class="form-input"></div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
+                    <h2 class="text-sm font-bold text-blue-700 uppercase tracking-wider mb-4"><i class="fas fa-robot mr-2"></i>2. Asisten AI & Referensi</h2>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="form-label text-blue-900">Judul SOP <span class="text-red-500">*</span></label>
+                            <input type="text" id="sop-title" class="form-input border-blue-300 font-bold text-lg py-3" placeholder="Contoh: Prosedur Identifikasi Pasien Lab...">
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label text-blue-900">Upload Dokumen Referensi</label>
+                                <div class="bg-white p-2 border border-dashed border-blue-300 rounded-lg">
+                                    <input type="file" id="file-upload-input" class="block w-full text-xs text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 cursor-pointer" accept=".txt,.pdf,.docx"/>
+                                    <p id="file-upload-info" class="text-[10px] text-gray-500 mt-1 pl-1">Bisa baca file PDF/Word panduan Kemenkes.</p>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="form-label text-blue-900">Arahan Spesifik (Opsional)</label>
+                                <textarea id="sop-context" rows="3" class="form-textarea text-xs" placeholder="Ketik ringkasan prosedur atau catatan khusus di sini..."></textarea>
+                            </div>
+                        </div>
+                        <button id="generate-ai-btn" type="button" class="w-full bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-md">
+                            <i class="fas fa-magic text-lg"></i> <span id="ai-btn-text">Susun Draf SOP Otomatis</span>
+                        </button>
+                        <p id="ai-error" class="hidden text-red-700 bg-red-100 border border-red-300 p-3 rounded-md text-sm mt-3"></p>
+                    </div>
+                </div>
+                
+                <div>
+                    <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4"><i class="fas fa-pen-to-square mr-2"></i>3. Konten Dokumen</h2>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div><label class="form-label">1. Pengertian</label><textarea id="sop-pengertian" rows="3" class="form-textarea"></textarea></div>
+                            <div><label class="form-label">2. Tujuan</label><textarea id="sop-tujuan" rows="2" class="form-textarea"></textarea></div>
+                            <div><label class="form-label">3. Kebijakan</label><textarea id="sop-kebijakan" rows="2" class="form-textarea"></textarea></div>
+                            <div><label class="form-label">4. Referensi</label><textarea id="sop-referensi" rows="2" class="form-textarea"></textarea></div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div><label class="form-label">7. Hal-hal yang perlu diperhatikan</label><textarea id="sop-perhatian" rows="2" class="form-textarea"></textarea></div>
+                            <div><label class="form-label">8. Unit Terkait</label><textarea id="sop-unit-terkait" rows="2" class="form-textarea"></textarea></div>
+                            <div><label class="form-label">9. Dokumen Terkait</label><textarea id="sop-dokumen-terkait" rows="2" class="form-textarea"></textarea></div>
+                            
+                            <div class="border border-gray-200 p-4 rounded-xl bg-gray-50 mt-4">
+                                <label class="form-label font-bold text-gray-800 mb-2"><i class="fas fa-history text-slate-500"></i> 10. Riwayat Revisi Dokumen</label>
+                                <div id="revisi-list" class="space-y-3"></div>
+                                <button type="button" id="add-revisi-btn" class="add-btn text-xs mt-3 w-full"><i class="fas fa-plus"></i> Tambah Riwayat</button>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 border border-indigo-100 p-5 rounded-xl bg-indigo-50/20">
+                            <p class="font-bold text-lg text-indigo-900 border-b border-indigo-100 pb-2 mb-4">5. Prosedur / Langkah-langkah</p>
+                            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                                <div><label class="form-label text-indigo-700">a. Alat & Bahan</label><div id="alat-list" class="space-y-2 mt-2"></div><button type="button" class="add-btn text-xs mt-2 w-full" data-type="alat"><i class="fas fa-plus"></i> Tambah Alat</button></div>
+                                <div><label class="form-label text-indigo-700">b. Petugas Pelaksana</label><div id="petugas-list" class="space-y-2 mt-2"></div><button type="button" class="add-btn text-xs mt-2 w-full" data-type="petugas"><i class="fas fa-plus"></i> Tambah Petugas</button></div>
+                            </div>
+                            <div>
+                                <label class="form-label text-indigo-700 text-base">c. Langkah-langkah (SPOK)</label>
+                                <div id="langkah-list" class="space-y-3 mt-3 bg-white p-4 border rounded-lg shadow-inner"></div>
+                                <button type="button" class="add-btn text-sm mt-3" data-type="langkah"><i class="fas fa-plus mr-1"></i> Tambah Langkah</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="flex flex-col sm:flex-row gap-4 mt-4 pt-6 border-t border-slate-200">
+                    <button id="save-btn" type="button" class="flex-1 bg-navy text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2" style="background-color: #1e293b;">
+                        <i class="fas fa-cloud-arrow-up"></i> Simpan ke Database Portal
+                    </button>
+                    <button id="preview-btn" type="button" class="flex-1 bg-skyblue text-white font-bold py-3.5 rounded-xl hover:bg-sky-500 transition-all flex items-center justify-center gap-2 shadow-lg" style="background-color: #38bdf8;">
+                        <i class="fas fa-print"></i> Pratinjau Kertas Cetak
+                    </button>
+                 </div>
+            </form>
+        </div>
+
+        <div id="sop-preview-container" class="no-print">
+            <div class="max-w-5xl mx-auto flex justify-between items-center mb-4 no-print px-4">
+                <h2 class="text-xl font-bold text-slate-700"><i class="fas fa-file-contract text-sky-500 mr-2"></i> Pratinjau Cetak</h2>
+                <button id="download-pdf-btn" class="bg-slate-800 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-700 transition-all flex items-center justify-center gap-2 shadow-md">
+                    <i class="fas fa-file-pdf"></i> Cetak Dokumen (Ctrl+P)
+                </button>
+            </div>
+            
+            <div id="sop-preview" class="folio-paper relative">
+                <div id="preview-header"></div>
+                <div id="preview-content"></div>
+            </div>
+            <div class="text-center text-slate-400 text-xs py-8 no-print">Ukuran Asli Kertas F4/Folio</div>
+        </div>
+        
+    </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // --- INTEGRASI PORTAL & FALLBACK ---
+    let CURRENT_API_KEY = "";
+    
+    // Autofill identitas fasyankes dari sessionStorage Portal
+    if(sessionStorage.getItem('unitKerja')){
+        document.getElementById('fasyankes').value = sessionStorage.getItem('unitKerja');
+    }
+
+    // Mendengarkan pasokan API Key dari Dashboard Portal
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SET_API_KEY') {
+            CURRENT_API_KEY = event.data.key;
+            const badge = document.getElementById('api-status-badge');
+            badge.className = "flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border shadow-sm bg-green-50 text-green-700 border-green-200 transition-colors duration-500";
+            badge.innerHTML = '<i class="fas fa-link"></i> Portal Terhubung';
+        }
+    });
+
+    // Fungsi melapor Limit API ke Portal
+    function laporLimitKePortal() {
+        console.warn("[SOP] Melaporkan limit API ke Portal...");
+        window.parent.postMessage({ type: 'API_ERROR', code: 429 }, '*');
+    }
+
+    let listCounters = { alat: 0, petugas: 0, langkah: 0, revisi: 0 };
+    const aiErrorEl = document.getElementById('ai-error');
+    
+    if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('custom-toast');
+        const icon = document.getElementById('toast-icon');
+        const msg = document.getElementById('toast-message');
+
+        msg.innerText = message;
+        
+        if (type === 'error') {
+            toast.className = "fixed bottom-4 right-4 px-5 py-3 rounded-xl shadow-2xl transition-all z-50 font-medium text-sm flex items-center gap-3 bg-red-600 text-white transform translate-y-0 opacity-100";
+            icon.innerHTML = '<i class="fas fa-exclamation-circle text-lg"></i>';
+        } else if (type === 'info') {
+            toast.className = "fixed bottom-4 right-4 px-5 py-3 rounded-xl shadow-2xl transition-all z-50 font-medium text-sm flex items-center gap-3 bg-sky-500 text-white transform translate-y-0 opacity-100";
+            icon.innerHTML = '<i class="fas fa-info-circle text-lg"></i>';
+        } else {
+            toast.className = "fixed bottom-4 right-4 px-5 py-3 rounded-xl shadow-2xl transition-all z-50 font-medium text-sm flex items-center gap-3 bg-slate-800 text-white transform translate-y-0 opacity-100";
+            icon.innerHTML = '<i class="fas fa-check-circle text-sky-400 text-lg"></i>';
+        }
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-20', 'opacity-0');
+        }, 4000);
+    }
+
+    // File Reader Logic (Tetap sama)
+    document.getElementById('file-upload-input').addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const contextTextArea = document.getElementById('sop-context');
+        const infoEl = document.getElementById('file-upload-info');
+        infoEl.textContent = "Membaca file...";
+        
+        try {
+            let text = '';
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            if (fileExtension === 'txt') {
+                text = await file.text();
+            } else if (fileExtension === 'docx') {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                text = result.value;
+            } else if (fileExtension === 'pdf') {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    text += textContent.items.map(item => item.str).join(' ') + '\n';
+                }
+            }
+            contextTextArea.value = text;
+            infoEl.textContent = `✅ Berhasil membaca ${file.name}`;
+        } catch (error) {
+            infoEl.textContent = `❌ Gagal: ${error.message}`;
+        }
+    });
+
+    // List Management Logic
+    function updateStepNumbers() {
+        document.querySelectorAll('#langkah-list .step-number').forEach((span, index) => { span.textContent = `${index + 1}.`; });
+    }
+
+    function addListItem(type, data = {}) {
+        const container = document.getElementById(`${type}-list`);
+        listCounters[type]++;
+        const id = listCounters[type];
+        const itemWrapper = document.createElement('div');
+        itemWrapper.className = 'border-b border-gray-100 pb-3 transition-all';
+        const isDecision = data.isDecision || false;
+        
+        let placeholderText = type === 'langkah' ? 'Tulis langkah prosedur (Pola SPOK)...' : (type === 'alat' ? 'Contoh: Spuit 3cc' : 'Contoh: Apoteker');
+
+        itemWrapper.innerHTML = `
+            <div class="flex items-start gap-2">
+                ${type === 'langkah' ? `<span class="step-number font-bold text-sky-600 bg-sky-50 w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-1"></span>` : ''}
+                <div class="flex-grow">
+                    <input type="text" class="form-input langkah-text text-sm" value="${data.text || ''}" placeholder="${placeholderText}">
+                </div>
+                ${type === 'langkah' ? `<div class="flex items-center pt-2 gap-1 flex-shrink-0"><input type="checkbox" id="is-decision-${id}" class="h-4 w-4 rounded text-sky-600 focus:ring-sky-500 is-decision-cb cursor-pointer"><label for="is-decision-${id}" class="text-[10px] font-bold text-slate-500 cursor-pointer uppercase">Bercabang?</label></div>` : ''}
+                <button type="button" class="remove-btn self-center shrink-0 w-7 h-7"><i class="fas fa-times text-xs"></i></button>
+            </div>
+            ${type === 'langkah' ? `<div id="decision-fields-${id}" class="mt-2 ml-8 space-y-2 bg-slate-50 p-3 rounded border ${isDecision ? '' : 'hidden'}"><label class="form-label text-[10px] font-bold text-green-700 uppercase"><i class="fas fa-arrow-right"></i> Jika YA:</label><input type="text" class="form-input text-xs decision-yes" value="${data.yes || ''}" placeholder="Tindakan jika YA..."><label class="form-label text-[10px] font-bold text-red-700 uppercase mt-2"><i class="fas fa-arrow-right"></i> Jika TIDAK:</label><input type="text" class="form-input text-xs decision-no" value="${data.no || ''}" placeholder="Tindakan jika TIDAK..."></div>` : ''}`;
+        
+        container.appendChild(itemWrapper);
+        if (isDecision) itemWrapper.querySelector('.is-decision-cb').checked = true;
+        itemWrapper.querySelector('.remove-btn').addEventListener('click', () => { itemWrapper.remove(); if (type === 'langkah') updateStepNumbers(); });
+        if (type === 'langkah') {
+            itemWrapper.querySelector('.is-decision-cb').addEventListener('change', (e) => { 
+                itemWrapper.querySelector(`#decision-fields-${id}`).classList.toggle('hidden', !e.target.checked); 
+            });
+            updateStepNumbers();
+        }
+    }
+    
+    function addRevisionItem(data = {}) {
+        const container = document.getElementById('revisi-list');
+        listCounters.revisi++;
+        const id = listCounters.revisi;
+        const div = document.createElement('div');
+        div.className = 'border bg-white p-3 rounded-lg';
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-2 border-b pb-1">
+                <p class="font-bold text-xs text-slate-500">Revisi #${id}</p>
+                <button type="button" class="remove-btn w-6 h-6"><i class="fas fa-times text-xs"></i></button>
+            </div>
+            <div class="space-y-2">
+                <input type="text" class="form-input text-xs revisi-ubah" value="${data.ubah || ''}" placeholder="Yang diubah">
+                <textarea class="form-textarea text-xs revisi-isi" rows="2" placeholder="Isi perubahan...">${data.isi || ''}</textarea>
+                <input type="date" class="form-input text-xs revisi-tanggal" value="${data.tanggal || ''}">
+            </div>`;
+        container.appendChild(div);
+        div.querySelector('.remove-btn').addEventListener('click', () => div.remove());
+    }
+
+    function populateList(type, items) {
+        document.getElementById(`${type}-list`).innerHTML = '';
+        listCounters[type] = 0;
+        if (items && Array.isArray(items)) {
+            items.forEach(item => {
+                if (typeof item === 'string') {
+                    if (type === 'langkah' && item.startsWith('KEPUTUSAN:')) {
+                        const parts = item.split('|');
+                        addListItem(type, { text: parts[0].replace('KEPUTUSAN:', '').trim(), isDecision: true, yes: parts[1]?.replace('YA:', '').trim() || '', no: parts[2]?.replace('TIDAK:', '').trim() || '' });
+                    } else { addListItem(type, { text: item }); }
+                } else { addListItem(type, item); }
+            });
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        const addBtn = e.target.closest('.add-btn');
+        if (addBtn) addListItem(addBtn.dataset.type);
+    });
+    document.getElementById('add-revisi-btn').addEventListener('click', () => addRevisionItem());
+
+    // --- KONEKSI API GEMINI ---
+    document.getElementById('generate-ai-btn').addEventListener('click', async () => {
+        const sopTitle = document.getElementById('sop-title').value.trim();
+        if (!sopTitle) { document.getElementById('sop-title').focus(); return showToast("Judul SOP wajib diisi.", "error"); }
+        if (!CURRENT_API_KEY) { return showToast("API Key belum disalurkan dari Portal. Harap pastikan panel API Key terisi.", "error"); }
+        
+        const btn = document.getElementById('generate-ai-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> Menghasilkan Draf...';
+        aiErrorEl.classList.add('hidden');
+        
+        try {
+            const sopContext = document.getElementById('sop-context').value.trim();
+            
+            // INJEKSI ATURAN SPESIFIK & TERMINOLOGI (Teroptimasi)
+            let basePrompt = `Anda adalah ahli pembuat Dokumen SOP Fasilitas Kesehatan di Indonesia. Buat SOP dengan judul: "${sopTitle}" dalam format JSON murni.
+
+ATURAN SUBSTANSI MUTLAK:
+1. Gunakan istilah "Indikator Mutu Prioritas (IMP)" untuk indikator mutu. JANGAN gunakan singkatan IMF.
+2. Jika relevan, bedakan secara tegas: "Jejaring" adalah fasilitas eksternal (Klinik Swasta/Apotek Luar), sedangkan "Jaringan" adalah cabang internal (Pustu/Posyandu).
+3. KHUSUS IDENTIFIKASI PASIEN: Jika SOP berkaitan dengan identifikasi, pastikan proses identifikasi pasien yang sebenarnya diletakkan pada unit klinis (Farmasi, Laboratorium, Kestrad). Di unit Pendaftaran, sebutkan bahwa fokusnya hanyalah "pencatatan identitas pasien", bukan identifikasi tindakan medis.
+4. Setiap langkah prosedur WAJIB menggunakan format kalimat aktif SPOK. Jika ada titik keputusan gunakan format: "KEPUTUSAN: [Pertanyaan]? | YA: [Tindakan] | TIDAK: [Tindakan]".
+
+Struktur JSON yang diminta: { "pengertian": "...", "tujuan": "...", "kebijakan": "...", "referensi": ["..."], "prosedur": { "alat_bahan": ["..."], "petugas": ["..."], "langkah_langkah": ["Langkah 1", "KEPUTUSAN: ...", "Langkah 3"] }, "perhatian": "...", "unit_terkait": ["..."], "dokumen_terkait": ["..."] }`;
+
+            if (sopContext) basePrompt += `\n\nREFERENSI TAMBAHAN:\n${sopContext}`;
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CURRENT_API_KEY}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: basePrompt }] }], generationConfig: { responseMimeType: "application/json" } })
+            });
+
+            if (response.status === 429) {
+                laporLimitKePortal();
+                throw new Error("Limit API tercapai. Memutar ke API Key Cadangan... Silakan klik tombol generate sekali lagi.");
+            }
+            if (!response.ok) throw new Error("Terjadi gangguan koneksi dengan server AI.");
+
+            const dataAPI = await response.json();
+            const textResult = dataAPI.candidates[0].content.parts[0].text;
+            const data = JSON.parse(textResult);
+            
+            document.getElementById('sop-pengertian').value = data.pengertian || '';
+            document.getElementById('sop-tujuan').value = data.tujuan || '';
+            document.getElementById('sop-kebijakan').value = data.kebijakan || '';
+            document.getElementById('sop-referensi').value = (data.referensi || []).join('\n');
+            document.getElementById('sop-perhatian').value = data.perhatian || '';
+            document.getElementById('sop-unit-terkait').value = (data.unit_terkait || []).join(', ');
+            document.getElementById('sop-dokumen-terkait').value = (data.dokumen_terkait || []).join(', ');
+            populateList('alat', data.prosedur?.alat_bahan);
+            populateList('petugas', data.prosedur?.petugas);
+            populateList('langkah', data.prosedur?.langkah_langkah);
+            
+            showToast("Draf SOP teroptimasi berhasil disusun!", "success");
+
+        } catch (error) {
+            aiErrorEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${error.message}`;
+            aiErrorEl.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-magic text-lg"></i> Susun Draf SOP Otomatis';
+        }
+    });
+
+    // --- PENGUMPULAN DATA & SIMPAN KE PORTAL ---
+    function collectAllData() {
+        return {
+            fasyankes: document.getElementById('fasyankes').value, 
+            kepala: document.getElementById('kepala').value, 
+            judul: document.getElementById('sop-title').value, 
+            noDokumen: document.getElementById('no-dokumen').value, 
+            noRevisi: document.getElementById('no-revisi').value, 
+            tglTerbit: document.getElementById('tgl-terbit').value, 
+            pengertian: document.getElementById('sop-pengertian').value, 
+            tujuan: document.getElementById('sop-tujuan').value, 
+            kebijakan: document.getElementById('sop-kebijakan').value, 
+            referensi: document.getElementById('sop-referensi').value, 
+            perhatian: document.getElementById('sop-perhatian').value, 
+            unitTerkait: document.getElementById('sop-unit-terkait').value, 
+            dokumenTerkait: document.getElementById('sop-dokumen-terkait').value,
+            alat: Array.from(document.querySelectorAll('#alat-list input')).map(i => i.value).filter(Boolean),
+            petugas: Array.from(document.querySelectorAll('#petugas-list input')).map(i => i.value).filter(Boolean),
+            langkah: Array.from(document.querySelectorAll('#langkah-list > div')).map(div => ({ 
+                isDecision: div.querySelector('.is-decision-cb').checked, 
+                text: div.querySelector('.langkah-text').value, 
+                yes: div.querySelector('.decision-yes').value, 
+                no: div.querySelector('.decision-no').value 
+            })),
+            revisi: Array.from(document.querySelectorAll('#revisi-list > div')).map(div => ({ 
+                ubah: div.querySelector('.revisi-ubah').value, 
+                isi: div.querySelector('.revisi-isi').value, 
+                tanggal: div.querySelector('.revisi-tanggal').value 
+            }))
+        };
+    }
+
+    document.getElementById('save-btn').addEventListener('click', () => {
+        const data = collectAllData();
+        
+        // Kirim Pesan ke Parent iframe (Dashboard Portal)
+        window.parent.postMessage({
+            type: 'SAVE_DOCUMENT',
+            payload: {
+                fasyankes: sessionStorage.getItem('jenisFasyankes') || 'Puskesmas',
+                unitKerja: data.fasyankes || 'Umum',
+                judul: `SOP: ${data.judul || 'Tanpa Judul'}`,
+                konten: JSON.stringify(data)
+            }
+        }, '*');
+        
+        showToast("Instruksi penyimpanan dikirim ke Pusat Data.");
+    });
+
+    // --- RENDER PRATINJAU CETAK ---
+    document.getElementById('preview-btn').addEventListener('click', () => {
+        document.getElementById('sop-preview-container').style.display = 'block';
+        const data = collectAllData();
+        const formatDate = (d) => d ? new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'long',year:'numeric'}).format(new Date(d)) : '';
+        
+        document.getElementById('preview-header').innerHTML = `
+            <table class="sop-header-table">
+                <tr>
+                    <td rowspan="2" class="logo-cell">LOGO</td>
+                    <td rowspan="2" class="title-cell">${data.judul||'JUDUL SOP'}</td>
+                    <td class="meta-cell">No. Dokumen: <br><b>${data.noDokumen}</b></td>
+                </tr>
+                <tr><td class="meta-cell">No. Revisi: <br><b>${data.noRevisi}</b></td></tr>
+                <tr>
+                    <td class="text-center font-bold">${data.fasyankes||'Nama Fasyankes'}</td>
+                    <td class="text-center font-bold">STANDAR OPERASIONAL PROSEDUR</td>
+                    <td class="meta-cell">Tgl. Terbit: <br><b>${formatDate(data.tglTerbit)}</b></td>
+                </tr>
+                <tr>
+                    <td class="text-center" style="padding-top: 15px;">Disahkan oleh,<br>Kepala ${data.fasyankes||''}<br><br><br><br><b><u>${data.kepala||'Nama Kepala'}</u></b></td>
+                    <td></td>
+                    <td class="meta-cell" style="vertical-align: top;">Halaman: 1/1</td>
+                </tr>
+            </table>`;
+        
+        let flowchartHTML = '';
+        data.langkah.forEach((step, index) => {
+            if (step.isDecision) {
+                flowchartHTML += `<div class="flowchart-shape flowchart-decision"><div class="flowchart-decision-text">${step.text}</div></div><div class="flowchart-branch-container"><div class="flowchart-branch"><div class="branch-label">YA</div><div class="flowchart-arrow">▼</div><div class="flowchart-shape">${step.yes||'Lanjut'}</div></div><div class="flowchart-branch"><div class="branch-label">TIDAK</div><div class="flowchart-arrow">▼</div><div class="flowchart-shape">${step.no||'Lanjut'}</div></div></div>`;
+            } else { flowchartHTML += `<div class="flowchart-shape">${step.text}</div>`; }
+            if (index < data.langkah.length - 1) flowchartHTML += `<div class="flowchart-arrow">▼</div>`;
+        });
+        
+        const revisiTableHTML = `<table class="w-full border-collapse border border-gray-400 mt-2"><thead class="bg-gray-100"><tr><th class="border p-2 text-left">Yang diubah</th><th class="border p-2 text-left">Isi Perubahan</th><th class="border p-2 text-left">Tgl Berlaku</th></tr></thead><tbody>${data.revisi.length>0?data.revisi.map(r=>`<tr><td class="border p-2">${r.ubah||''}</td><td class="border p-2">${r.isi||''}</td><td class="border p-2">${formatDate(r.tanggal)||''}</td></tr>`).join(''):'<tr><td colspan="3" class="p-2 text-center text-gray-500">Tidak ada riwayat.</td></tr>'}</tbody></table>`;
+        
+        const toHtmlList = (items) => items.length > 0 ? `<ul style="list-style-type: disc; padding-left: 20px; margin: 0;">${items.map(i => `<li style="margin-bottom: 4px; padding-left: 5px;">${i}</li>`).join('')}</ul>` : '<p style="color:gray; font-style:italic;">Tidak ada</p>';
+        const toHtmlSteps = (items) => items.length > 0 ? `<ol style="list-style-type: decimal; padding-left: 20px; margin: 0;">${items.map(s => `<li style="margin-bottom: 8px; text-align: justify;">${s.text}${s.isDecision ? `<br><span style="font-size: 0.9em; color: #4b5563;">&#10551; <i>Jika <b>YA</b>: ${s.yes} | <b>TIDAK</b>: ${s.no}</i></span>` : ''}</li>`).join('')}</ol>` : '<p style="color:gray; font-style:italic;">Tidak ada</p>';
+        const textToHtml = (text) => text ? text.replace(/\n/g, '<br>') : '<p style="color:gray; font-style:italic;">Tidak ada</p>';
+        
+        document.getElementById('preview-content').innerHTML = `
+            <div><p class="sop-section-title">1. Pengertian</p><div class="sop-content">${textToHtml(data.pengertian)}</div></div>
+            <div><p class="sop-section-title">2. Tujuan</p><div class="sop-content">${textToHtml(data.tujuan)}</div></div>
+            <div><p class="sop-section-title">3. Kebijakan</p><div class="sop-content">${textToHtml(data.kebijakan)}</div></div>
+            <div><p class="sop-section-title">4. Referensi</p><div class="sop-content">${textToHtml(data.referensi)}</div></div>
+            <div><p class="sop-section-title">5. Prosedur / Langkah-langkah</p><div class="sop-content"><p style="font-weight: bold; margin-bottom: 5px;">a. Alat & Bahan</p>${toHtmlList(data.alat)}<p style="font-weight: bold; margin-top: 10px; margin-bottom: 5px;">b. Petugas Pelaksana</p>${toHtmlList(data.petugas)}<p style="font-weight: bold; margin-top: 10px; margin-bottom: 5px;">c. Langkah-langkah</p>${toHtmlSteps(data.langkah)}</div></div>
+            <div><p class="sop-section-title">6. Bagan Alir</p><div class="sop-content flowchart">${flowchartHTML||'<p class="italic">...</p>'}</div></div>
+            <div><p class="sop-section-title">7. Hal yang perlu diperhatikan</p><div class="sop-content">${textToHtml(data.perhatian)}</div></div>
+            <div><p class="sop-section-title">8. Unit Terkait</p><div class="sop-content">${textToHtml(data.unitTerkait)}</div></div>
+            <div><p class="sop-section-title">9. Dokumen Terkait</p><div class="sop-content">${textToHtml(data.dokumenTerkait)}</div></div>
+            <div><p class="sop-section-title">10. Riwayat Revisi</p><div class="sop-content">${revisiTableHTML}</div></div>`;
+        
+        document.getElementById('sop-preview-container').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('download-pdf-btn').addEventListener('click', () => { setTimeout(() => window.print(), 500); });
+
+    // Initial setup
+    if (document.querySelectorAll('#langkah-list > div').length === 0) addListItem('langkah');
+    if (document.querySelectorAll('#alat-list > div').length === 0) addListItem('alat');
+    if (document.querySelectorAll('#petugas-list > div').length === 0) addListItem('petugas');
+});
+</script>
+</body>
+</html>

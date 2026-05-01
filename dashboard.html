@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Portal Fasyankes | alfan-23</title>
+    
+    <script>
+        (function() {
+            const allowedDomain = "alfan-23.github.io";
+            const currentDomain = window.location.hostname;
+            if (currentDomain !== allowedDomain && currentDomain !== "localhost" && currentDomain !== "127.0.0.1") {
+                document.documentElement.innerHTML = `
+                    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background-color:#1e293b; color:#38bdf8; font-family:sans-serif; text-align:center; padding:20px;">
+                        <div>
+                            <h1 style="font-size:2rem; margin-bottom:10px;">⚠️ LISENSI TIDAK VALID</h1>
+                            <p>Akses hanya diizinkan melalui domain resmi: <b>${allowedDomain}</b></p>
+                        </div>
+                    </div>`;
+                throw new Error("Unauthorized Access");
+            }
+            
+            if (!sessionStorage.getItem('isLoggedIn') && currentDomain !== "localhost" && currentDomain !== "127.0.0.1") {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { navy: '#1e293b', skyblue: '#38bdf8' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 h-screen flex overflow-hidden">
+
+    <aside class="w-64 bg-navy text-white flex flex-col transition-all duration-300">
+        <div class="p-6 border-b border-slate-700 flex items-center gap-3">
+            <div class="w-10 h-10 bg-skyblue rounded-lg flex items-center justify-center font-bold text-navy text-xl">
+                <i class="fa-solid fa-hospital"></i>
+            </div>
+            <div>
+                <h2 class="font-bold text-lg leading-tight text-skyblue">PORTAL</h2>
+                <p class="text-xs text-slate-400">Admin Terpadu</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto p-4 space-y-2">
+            <div class="mb-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">Modul Puskesmas</p>
+                
+                <button onclick="loadApp('1.draft_sk.html')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-skyblue transition text-left">
+                    <i class="fa-solid fa-file-signature w-5 text-skyblue"></i> Generator SK
+                </button>
+                <button onclick="loadApp('2.sop.html')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-skyblue transition text-left">
+                    <i class="fa-solid fa-file-contract w-5 text-skyblue"></i> Generator SOP
+                </button>
+                <button onclick="loadApp('3.profil_imp.html')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-skyblue transition text-left">
+                    <i class="fa-solid fa-chart-line w-5 text-skyblue"></i> Profil IMP
+                </button>
+                <button onclick="loadApp('4.audit_internal.html')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-skyblue transition text-left">
+                    <i class="fa-solid fa-clipboard-check w-5 text-skyblue"></i> Audit Internal ILP
+                </button>
+                <button onclick="loadApp('5.manrisk.html')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-skyblue transition text-left">
+                    <i class="fa-solid fa-triangle-exclamation w-5 text-skyblue"></i> Manajemen Risiko
+                </button>
+                <button onclick="loadApp('6.rca_ikp.html')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-skyblue transition text-left">
+                    <i class="fa-solid fa-magnifying-glass-chart w-5 text-skyblue"></i> Investigasi IKP
+                </button>
+            </div>
+
+            <div class="mb-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">Fasyankes Lain</p>
+                <button disabled class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-600 cursor-not-allowed text-left">
+                    <span class="flex items-center gap-3"><i class="fa-solid fa-stethoscope w-5"></i> Klinik Pratama</span>
+                    <i class="fa-solid fa-lock text-xs"></i>
+                </button>
+                <button disabled class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-600 cursor-not-allowed text-left">
+                    <span class="flex items-center gap-3"><i class="fa-solid fa-truck-medical w-5"></i> Rumah Sakit</span>
+                    <i class="fa-solid fa-lock text-xs"></i>
+                </button>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-slate-700">
+            <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition text-sm">
+                <i class="fa-solid fa-right-from-bracket"></i> Keluar Portal
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full bg-slate-100">
+        
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 z-10 shadow-sm">
+            <div class="flex items-center gap-2 text-slate-800">
+                <i class="fa-solid fa-key text-amber-500"></i>
+                <h1 class="font-semibold text-sm">API Management</h1>
+                <span id="activeIndicator" class="ml-2 text-[10px] font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Slot 1 Aktif</span>
+            </div>
+            
+            <div class="flex flex-1 max-w-2xl gap-2">
+                <input type="password" id="api_key_0" class="w-1/4 text-[10px] px-3 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-skyblue outline-none" placeholder="API Key 1 (Primary)" onchange="broadcastApiKey()">
+                <input type="password" id="api_key_1" class="w-1/4 text-[10px] px-3 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-skyblue outline-none" placeholder="API Key 2" onchange="broadcastApiKey()">
+                <input type="password" id="api_key_2" class="w-1/4 text-[10px] px-3 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-skyblue outline-none" placeholder="API Key 3" onchange="broadcastApiKey()">
+                <input type="password" id="api_key_3" class="w-1/4 text-[10px] px-3 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-skyblue outline-none" placeholder="API Key 4" onchange="broadcastApiKey()">
+            </div>
+        </header>
+
+        <div class="flex-1 p-4 relative overflow-hidden">
+            <div id="welcomeScreen" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-0">
+                <i class="fa-solid fa-shield-heart text-6xl mb-4 opacity-20"></i>
+                <h2 class="text-xl font-medium">Selamat Datang di Portal Terpadu</h2>
+                <p class="text-sm mt-2 max-w-md text-center">Pilih modul aplikasi di samping untuk memulai manajemen dokumen dan analisis mutu.</p>
+            </div>
+            
+            <iframe id="appFrame" class="w-full h-full bg-white rounded-xl shadow-sm border border-slate-200 relative z-10 hidden" src="about:blank"></iframe>
+        </div>
+    </main>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbz45tKwXC2c1bdEDDWd-97sF8KJweuNPlLvVUAYrGW_m8U2-3yorbaeaYemuFLnX9c4/exec";
+        let currentKeyIndex = 0;
+        const totalKeys = 4;
+
+        function getActiveApiKey() {
+            const input = document.getElementById(`api_key_${currentKeyIndex}`);
+            return input ? input.value.trim() : "";
+        }
+
+        function rotateApiKey() {
+            currentKeyIndex = (currentKeyIndex + 1) % totalKeys;
+            document.getElementById('activeIndicator').innerText = `Slot ${currentKeyIndex + 1} Aktif`;
+            document.getElementById('activeIndicator').className = "ml-2 text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full";
+            setTimeout(() => {
+                document.getElementById('activeIndicator').className = "ml-2 text-[10px] font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full transition-colors";
+            }, 800);
+            broadcastApiKey();
+        }
+
+        function broadcastApiKey() {
+            const iframe = document.getElementById('appFrame');
+            const activeKey = getActiveApiKey();
+            if (activeKey && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type: 'SET_API_KEY', key: activeKey }, '*');
+            }
+        }
+
+        window.addEventListener('message', async (event) => {
+            if (!event.data || !event.data.type) return;
+
+            if (event.data.type === 'API_ERROR' && event.data.code === 429) {
+                rotateApiKey();
+            }
+            
+            if (event.data.type === 'SAVE_DOCUMENT') {
+                const payload = event.data.payload;
+                try {
+                    const response = await fetch(GAS_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'save_document',
+                            ...payload
+                        })
+                    });
+                    const result = await response.json();
+                    if(result.status === 'success') {
+                        alert("Dokumen Berhasil Diarsipkan di Database Pusat.");
+                    } else {
+                        alert("Gagal menyimpan: " + result.message);
+                    }
+                } catch (error) {
+                    alert("Kesalahan koneksi ke Database Pusat.");
+                }
+            }
+        });
+
+        function loadApp(filename) {
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            const iframe = document.getElementById('appFrame');
+            iframe.classList.remove('hidden');
+            iframe.src = filename;
+            iframe.onload = () => broadcastApiKey();
+        }
+
+        function logout() {
+            sessionStorage.removeItem('isLoggedIn');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

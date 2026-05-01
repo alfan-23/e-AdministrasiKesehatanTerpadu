@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Administrasi Kesehatan Terpadu | alfan-23</title>
+    
+    <script>
+        (function() {
+            const allowedDomain = "alfan-23.github.io";
+            const currentDomain = window.location.hostname;
+            // Pengecualian localhost agar tetap bisa dilakukan pengujian secara lokal
+            if (currentDomain !== allowedDomain && currentDomain !== "localhost" && currentDomain !== "127.0.0.1") {
+                document.documentElement.innerHTML = `
+                    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background-color:#1e293b; color:#38bdf8; font-family:sans-serif; text-align:center; padding:20px;">
+                        <div>
+                            <h1 style="font-size:2rem; margin-bottom:10px;">⚠️ LISENSI TIDAK VALID</h1>
+                            <p>Akses hanya diizinkan melalui domain resmi: <b>${allowedDomain}</b></p>
+                        </div>
+                    </div>`;
+                throw new Error("Unauthorized Access");
+            }
+        })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: '#1e293b',
+                        skyblue: '#38bdf8'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #f1f5f9; }
+        .bg-gradient-navy { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .form-transition { transition: all 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+        
+        <div class="md:w-5/12 bg-gradient-navy text-white p-10 flex flex-col justify-center relative overflow-hidden">
+            <div class="absolute top-[-50px] right-[-50px] w-32 h-32 bg-skyblue rounded-full opacity-20 blur-2xl"></div>
+            <div class="absolute bottom-[-50px] left-[-50px] w-40 h-40 bg-skyblue rounded-full opacity-20 blur-2xl"></div>
+            
+            <div class="relative z-10">
+                <h1 class="text-3xl font-bold mb-4 text-skyblue leading-tight">Portal Administrasi Kesehatan</h1>
+                <p class="text-sm text-slate-300 leading-relaxed mb-8">
+                    Integrasi sistem informasi untuk manajemen mutu, risiko, dan akreditasi fasyankes berbasis teknologi AI.
+                </p>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-3 text-xs text-slate-400">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span>Integrasi Layanan Primer (ILP) Ready</span>
+                    </div>
+                    <div class="flex items-center space-x-3 text-xs text-slate-400">
+                        <div class="w-2 h-2 bg-skyblue rounded-full"></div>
+                        <span>Otomasi Dokumen Akreditasi</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:w-7/12 p-8 md:p-12 relative flex flex-col justify-center">
+            
+            <div id="loginForm" class="form-transition block">
+                <h2 class="text-2xl font-bold text-navy mb-6">Selamat Datang</h2>
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Jenis Fasyankes</label>
+                        <select id="loginFasyankes" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-skyblue focus:border-skyblue outline-none text-sm">
+                            <option value="">Pilih Jenis</option>
+                            <option value="Puskesmas">Puskesmas</option>
+                            <option value="Klinik">Klinik / Praktik Mandiri</option>
+                            <option value="Rumah Sakit">Rumah Sakit</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Email</label>
+                        <input type="email" id="loginEmail" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-skyblue focus:border-skyblue outline-none text-sm" placeholder="email@fasyankes.id">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Password</label>
+                        <input type="password" id="loginPassword" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-skyblue focus:border-skyblue outline-none text-sm" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full bg-navy text-white font-semibold py-3 rounded-lg hover:bg-slate-800 transition shadow-lg mt-2">
+                        Masuk ke Dashboard
+                    </button>
+                </form>
+                <p class="text-center text-sm text-slate-500 mt-6">
+                    Belum memiliki akun? <a href="#" onclick="toggleForm('register')" class="text-skyblue font-semibold hover:underline">Registrasi Fasyankes</a>
+                </p>
+            </div>
+
+            <div id="registerForm" class="form-transition hidden">
+                <h2 class="text-2xl font-bold text-navy mb-6">Registrasi Baru</h2>
+                <form onsubmit="handleRegister(event)" class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jenis</label>
+                            <select id="regFasyankes" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs">
+                                <option value="">Pilih</option>
+                                <option value="Puskesmas">Puskesmas</option>
+                                <option value="Klinik">Klinik</option>
+                                <option value="Rumah Sakit">Rumah Sakit</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Unit Kerja</label>
+                            <input type="text" id="regUnit" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" placeholder="Nama Fasyankes">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Provinsi</label>
+                            <select id="regProvinsi" onchange="updateKabupaten()" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs">
+                                <option value="">Pilih Provinsi</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kabupaten/Kota</label>
+                            <select id="regKabupaten" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" disabled>
+                                <option value="">Pilih Kab/Kota</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Lengkap PIC</label>
+                        <input type="text" id="regName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" placeholder="Nama Admin/Penanggung Jawab">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email</label>
+                            <input type="email" id="regEmail" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" placeholder="email@fasyankes.id">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Password</label>
+                            <input type="password" id="regPassword" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-skyblue text-white font-bold py-3 rounded-lg hover:bg-sky-500 transition shadow-lg mt-2">
+                        Daftar Sekarang
+                    </button>
+                </form>
+                <p class="text-center text-sm text-slate-500 mt-4">
+                    Sudah terdaftar? <a href="#" onclick="toggleForm('login')" class="text-navy font-semibold hover:underline">Kembali ke Login</a>
+                </p>
+            </div>
+
+            <div id="loader" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm z-20 flex flex-col justify-center items-center rounded-r-2xl">
+                <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-skyblue mb-4"></div>
+                <p class="text-navy font-semibold" id="loaderText">Memproses data...</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // INTEGRASI GOOGLE APPS SCRIPT
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbz45tKwXC2c1bdEDDWd-97sF8KJweuNPlLvVUAYrGW_m8U2-3yorbaeaYemuFLnX9c4/exec";
+
+        // DATA 38 PROVINSI INDONESIA
+        const wilayahData = {
+            "Aceh": ["Banda Aceh", "Sabang", "Lhokseumawe", "Langsa", "Subulussalam"],
+            "Sumatera Utara": ["Medan", "Binjai", "Tebing Tinggi", "Pematangsiantar", "Padang Sidempuan"],
+            "Sumatera Barat": ["Padang", "Bukittinggi", "Payakumbuh", "Padang Panjang", "Pariaman"],
+            "Riau": ["Pekanbaru", "Dumai"],
+            "Kepulauan Riau": ["Batam", "Tanjungpinang"],
+            "Jambi": ["Jambi", "Sungai Penuh"],
+            "Sumatera Selatan": ["Palembang", "Prabumulih", "Lubuklinggau", "Pagar Alam"],
+            "Bangka Belitung": ["Pangkal Pinang"],
+            "Bengkulu": ["Bengkulu"],
+            "Lampung": ["Bandar Lampung", "Metro"],
+            "Banten": ["Serang", "Tangerang", "Tangerang Selatan", "Cilegon"],
+            "DKI Jakarta": ["Jakarta Pusat", "Jakarta Utara", "Jakarta Barat", "Jakarta Selatan", "Jakarta Timur"],
+            "Jawa Barat": ["Bandung", "Bogor", "Depok", "Bekasi", "Tasikmalaya", "Cimahi", "Cirebon", "Sukabumi", "Banjar", "Kuningan"],
+            "Jawa Tengah": ["Semarang", "Surakarta", "Magelang", "Pekalongan", "Salatiga", "Tegal"],
+            "DI Yogyakarta": ["Yogyakarta", "Sleman", "Bantul", "Gunungkidul", "Kulon Progo"],
+            "Jawa Timur": ["Surabaya", "Malang", "Batu", "Kediri", "Madiun", "Mojokerto", "Pasuruan", "Probolinggo", "Blitar"],
+            "Bali": ["Denpasar"],
+            "Nusa Tenggara Barat": ["Mataram", "Bima"],
+            "Nusa Tenggara Timur": ["Kupang"],
+            "Kalimantan Barat": ["Pontianak", "Singkawang"],
+            "Kalimantan Tengah": ["Palangka Raya"],
+            "Kalimantan Selatan": ["Banjarmasin", "Banjarbaru"],
+            "Kalimantan Timur": ["Samarinda", "Balikpapan", "Bontang"],
+            "Kalimantan Utara": ["Tarakan"],
+            "Sulawesi Utara": ["Manado", "Bitung", "Tomohon", "Kotamobagu"],
+            "Gorontalo": ["Gorontalo"],
+            "Sulawesi Tengah": ["Palu"],
+            "Sulawesi Barat": ["Mamuju"],
+            "Sulawesi Selatan": ["Makassar", "Parepare", "Palopo"],
+            "Sulawesi Tenggara": ["Kendari", "Baubau"],
+            "Maluku": ["Ambon", "Tual"],
+            "Maluku Utara": ["Ternate", "Tidore Kepulauan"],
+            "Papua": ["Jayapura"],
+            "Papua Barat": ["Manokwari"],
+            "Papua Selatan": ["Merauke"],
+            "Papua Tengah": ["Nabire"],
+            "Papua Pegunungan": ["Wamena"],
+            "Papua Barat Daya": ["Sorong"]
+        };
+
+        // Inisialisasi Dropdown Provinsi
+        window.onload = () => {
+            const provSelect = document.getElementById('regProvinsi');
+            Object.keys(wilayahData).sort().forEach(prov => {
+                let opt = document.createElement('option');
+                opt.value = prov;
+                opt.text = prov;
+                provSelect.add(opt);
+            });
+        };
+
+        // Update Dropdown Kabupaten berdasarkan Provinsi
+        function updateKabupaten() {
+            const prov = document.getElementById('regProvinsi').value;
+            const kabSelect = document.getElementById('regKabupaten');
+            kabSelect.innerHTML = '<option value="">Pilih Kab/Kota</option>';
+            
+            if (prov && wilayahData[prov]) {
+                kabSelect.disabled = false;
+                wilayahData[prov].sort().forEach(kab => {
+                    let opt = document.createElement('option');
+                    opt.value = kab;
+                    opt.text = kab;
+                    kabSelect.add(opt);
+                });
+            } else {
+                kabSelect.disabled = true;
+            }
+        }
+
+        // Toggle Form
+        function toggleForm(type) {
+            document.getElementById('loginForm').style.display = (type === 'login') ? 'block' : 'none';
+            document.getElementById('registerForm').style.display = (type === 'register') ? 'block' : 'none';
+        }
+
+        // Loader Management
+        function showLoader(text) {
+            document.getElementById('loaderText').innerText = text;
+            document.getElementById('loader').classList.remove('hidden');
+        }
+        function hideLoader() {
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        // LOGIN HANDLER
+        async function handleLogin(e) {
+            e.preventDefault();
+            showLoader("Memverifikasi kredensial...");
+            
+            const payload = {
+                action: 'login',
+                fasyankes: document.getElementById('loginFasyankes').value,
+                email: document.getElementById('loginEmail').value,
+                pass: document.getElementById('loginPassword').value
+            };
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                    sessionStorage.setItem('unitKerja', result.unitKerja);
+                    sessionStorage.setItem('jenisFasyankes', payload.fasyankes);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert("Akses Ditolak: " + result.message);
+                }
+            } catch (err) {
+                alert("Kesalahan koneksi ke server. Silakan coba lagi.");
+            } finally {
+                hideLoader();
+            }
+        }
+
+        // REGISTER HANDLER
+        async function handleRegister(e) {
+            e.preventDefault();
+            showLoader("Mendaftarkan unit fasyankes...");
+
+            const payload = {
+                action: 'register',
+                fasyankes: document.getElementById('regFasyankes').value,
+                unit: document.getElementById('regUnit').value,
+                provinsi: document.getElementById('regProvinsi').value,
+                kabupaten: document.getElementById('regKabupaten').value,
+                nama: document.getElementById('regName').value,
+                email: document.getElementById('regEmail').value,
+                pass: document.getElementById('regPassword').value
+            };
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert(result.message);
+                    toggleForm('login');
+                } else {
+                    alert("Registrasi Gagal: " + result.message);
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan teknis. Periksa URL GAS atau koneksi Anda.");
+            } finally {
+                hideLoader();
+            }
+        }
+    </script>
+</body>
+</html>
