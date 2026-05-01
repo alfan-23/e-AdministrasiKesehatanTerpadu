@@ -5,17 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI SOP Generator (Integrasi Portal)</title>
     
+    <!-- SUNTIKAN DOMAIN LOCK (Super Fleksibel & Anti-Blokir Sendiri) -->
     <script>
         (function() {
-            const allowedDomain = "alfan-23.github.io";
-            const currentDomain = window.location.hostname;
-            if (currentDomain !== allowedDomain && currentDomain !== "localhost" && currentDomain !== "127.0.0.1") {
+            try {
+                var hostname = window.location.hostname || "";
+                var href = window.location.href || "";
+                
+                // Pengecualian khusus agar pratinjau di sistem Canvas (termasuk mobile) tidak diblokir
+                if (!hostname || 
+                    hostname === "localhost" || 
+                    hostname === "127.0.0.1" || 
+                    hostname.includes("alfan-23") || 
+                    hostname.includes("goog") || 
+                    href.includes("blob:") || 
+                    href.includes("about:")) {
+                    return; // Lolos Verifikasi
+                }
+
                 document.documentElement.innerHTML = `
                     <div style="font-family:sans-serif; text-align:center; padding:50px; background:#1e293b; color:#38bdf8; height:100vh; display:flex; flex-direction:column; justify-content:center;">
                         <h2>⚠️ LISENSI TIDAK VALID</h2>
                         <p>Akses modul ini hanya diizinkan melalui Portal Administrasi Kesehatan Resmi.</p>
                     </div>`;
                 throw new Error("Unauthorized Access");
+            } catch(e) {
+                if(e.message === "Unauthorized Access") throw e;
             }
         })();
     </script>
@@ -99,7 +114,7 @@
                         <p class="text-xs text-slate-500">Standar Akreditasi & Integrasi Layanan Primer (ILP)</p>
                     </div>
                     <div id="api-status-badge" class="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border shadow-sm bg-amber-50 text-amber-600 border-amber-200">
-                        <i class="fas fa-satellite-dish animate-pulse"></i> Menunggu Kunci API dari Portal...
+                        <i class="fas fa-satellite-dish animate-pulse"></i> Menunggu Portal...
                     </div>
                 </div>
 
@@ -179,10 +194,10 @@
                 </div>
 
                  <div class="flex flex-col sm:flex-row gap-4 mt-4 pt-6 border-t border-slate-200">
-                    <button id="save-btn" type="button" class="flex-1 bg-navy text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2" style="background-color: #1e293b;">
+                    <button id="save-btn" type="button" class="flex-1 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2" style="background-color: #1e293b;">
                         <i class="fas fa-cloud-arrow-up"></i> Simpan ke Database Portal
                     </button>
-                    <button id="preview-btn" type="button" class="flex-1 bg-skyblue text-white font-bold py-3.5 rounded-xl hover:bg-sky-500 transition-all flex items-center justify-center gap-2 shadow-lg" style="background-color: #38bdf8;">
+                    <button id="preview-btn" type="button" class="flex-1 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg" style="background-color: #38bdf8;">
                         <i class="fas fa-print"></i> Pratinjau Kertas Cetak
                     </button>
                  </div>
@@ -193,7 +208,7 @@
             <div class="max-w-5xl mx-auto flex justify-between items-center mb-4 no-print px-4">
                 <h2 class="text-xl font-bold text-slate-700"><i class="fas fa-file-contract text-sky-500 mr-2"></i> Pratinjau Cetak</h2>
                 <button id="download-pdf-btn" class="bg-slate-800 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-700 transition-all flex items-center justify-center gap-2 shadow-md">
-                    <i class="fas fa-file-pdf"></i> Cetak Dokumen (Ctrl+P)
+                    <i class="fas fa-print"></i> Cetak Dokumen (Ctrl+P)
                 </button>
             </div>
             
@@ -227,7 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Fungsi melapor Limit API ke Portal
     function laporLimitKePortal() {
         console.warn("[SOP] Melaporkan limit API ke Portal...");
         window.parent.postMessage({ type: 'API_ERROR', code: 429 }, '*');
@@ -264,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 4000);
     }
 
-    // File Reader Logic (Tetap sama)
+    // File Reader Logic
     document.getElementById('file-upload-input').addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -389,16 +403,16 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const sopContext = document.getElementById('sop-context').value.trim();
             
-            // INJEKSI ATURAN SPESIFIK & TERMINOLOGI (Teroptimasi)
-            let basePrompt = `Anda adalah ahli pembuat Dokumen SOP Fasilitas Kesehatan di Indonesia. Buat SOP dengan judul: "${sopTitle}" dalam format JSON murni.
+            // INJEKSI ATURAN SPESIFIK & TERMINOLOGI
+            let basePrompt = `Anda adalah ahli membuat Standar Operasional Prosedur (SOP) fasilitas kesehatan di Indonesia. Berdasarkan judul SOP: "${sopTitle}", buatkan konten format JSON.
+ATURAN MUTLAK:
+1. Gunakan istilah "Indikator Mutu Prioritas (IMP)", bukan IMF.
+2. Jika relevan, bedakan: "Jejaring" (fasilitas eksternal) dan "Jaringan" (cabang internal Pustu/Posyandu).
+3. KHUSUS IDENTIFIKASI PASIEN: Identifikasi medis dilakukan di unit klinis (Farmasi, Laboratorium, Kestrad). Pendaftaran HANYA untuk pencatatan identitas.
+4. Bagian "langkah_langkah" WAJIB mengikuti pola kalimat aktif SPO(K). 
+Jika ada titik keputusan, GUNAKAN FORMAT KHUSUS ini: "KEPUTUSAN: [Pertanyaan]? | YA: [Tindakan jika ya] | TIDAK: [Tindakan jika tidak]".
 
-ATURAN SUBSTANSI MUTLAK:
-1. Gunakan istilah "Indikator Mutu Prioritas (IMP)" untuk indikator mutu. JANGAN gunakan singkatan IMF.
-2. Jika relevan, bedakan secara tegas: "Jejaring" adalah fasilitas eksternal (Klinik Swasta/Apotek Luar), sedangkan "Jaringan" adalah cabang internal (Pustu/Posyandu).
-3. KHUSUS IDENTIFIKASI PASIEN: Jika SOP berkaitan dengan identifikasi, pastikan proses identifikasi pasien yang sebenarnya diletakkan pada unit klinis (Farmasi, Laboratorium, Kestrad). Di unit Pendaftaran, sebutkan bahwa fokusnya hanyalah "pencatatan identitas pasien", bukan identifikasi tindakan medis.
-4. Setiap langkah prosedur WAJIB menggunakan format kalimat aktif SPOK. Jika ada titik keputusan gunakan format: "KEPUTUSAN: [Pertanyaan]? | YA: [Tindakan] | TIDAK: [Tindakan]".
-
-Struktur JSON yang diminta: { "pengertian": "...", "tujuan": "...", "kebijakan": "...", "referensi": ["..."], "prosedur": { "alat_bahan": ["..."], "petugas": ["..."], "langkah_langkah": ["Langkah 1", "KEPUTUSAN: ...", "Langkah 3"] }, "perhatian": "...", "unit_terkait": ["..."], "dokumen_terkait": ["..."] }`;
+Struktur JSON: { "pengertian": "...", "tujuan": "...", "kebijakan": "...", "referensi": ["..."], "prosedur": { "alat_bahan": ["..."], "petugas": ["..."], "langkah_langkah": ["Langkah 1", "KEPUTUSAN: ...", "Langkah 3"] }, "perhatian": "...", "unit_terkait": ["..."], "dokumen_terkait": ["..."] }`;
 
             if (sopContext) basePrompt += `\n\nREFERENSI TAMBAHAN:\n${sopContext}`;
             
