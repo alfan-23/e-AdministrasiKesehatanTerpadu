@@ -248,6 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.parent.postMessage({ type: 'API_ERROR', code: 429 }, '*');
     }
 
+    // Fungsi Pembantu untuk Auto-Jeda (Tidur selama sekian milidetik)
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
     let listCounters = { alat: 0, petugas: 0, langkah: 0, revisi: 0 };
     const aiErrorEl = document.getElementById('ai-error');
     
@@ -390,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('add-revisi-btn').addEventListener('click', () => addRevisionItem());
 
-    // --- KONEKSI API GEMINI ---
+    // --- KONEKSI API GEMINI (Dengan Auto-Fallback Model Gratis & Auto-Jeda) ---
     document.getElementById('generate-ai-btn').addEventListener('click', async () => {
         const sopTitle = document.getElementById('sop-title').value.trim();
         if (!sopTitle) { document.getElementById('sop-title').focus(); return showToast("Judul SOP wajib diisi.", "error"); }
@@ -398,7 +401,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const btn = document.getElementById('generate-ai-btn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> Menghasilkan Draf...';
         aiErrorEl.classList.add('hidden');
         
         try {
@@ -417,31 +419,80 @@ Struktur JSON: { "pengertian": "...", "tujuan": "...", "kebijakan": "...", "refe
 
             if (sopContext) basePrompt += `\n\nREFERENSI TAMBAHAN:\n${sopContext}`;
             
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${CURRENT_API_KEY}`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: basePrompt }] }], generationConfig: { responseMimeType: "application/json" } })
-            });
+            // HANYA MENGGUNAKAN MODEL GRATIS YANG CEPAT DAN RINGAN
+            const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-flash-latest'];
+            let dataAPI = null;
+            let lastError = null;
+            let success = false;
 
-            if (response.status === 429) {
-                laporLimitKePortal();
-                throw new Error("Limit API tercapai. Memutar ke API Key Cadangan... Silakan klik generate sekali lagi.");
-            }
-            
-            // [PERBAIKAN] Detektor Error Asli dari Google
-            if (!response.ok) {
-                let errorSebab = `Status: ${response.status}`;
-                try {
-                    const errData = await response.json();
-                    if (errData.error && errData.error.message) {
-                        errorSebab = errData.error.message;
+            const payloadBody = JSON.stringify({ contents: [{ parts: [{ text: basePrompt }] }], generationConfig: { responseMimeType: "application/json" } });
+
+            for (const model of modelsToTry) {
+                let maxRetries = 2; // Memberi 2 kesempatan mencoba di setiap model
+                
+                while (maxRetries > 0 && !success) {
+                    try {
+                        btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> AI Berpikir (${model})...`;
+                        
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${CURRENT_API_KEY}`;
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: payloadBody
+                        });
+
+                        // Skenario 1: Terkena Limit (Error 429) -> Auto Jeda
+                        if (response.status === 429) {
+                            laporLimitKePortal();
+                            maxRetries--;
+                            if (maxRetries > 0) {
+                                btn.innerHTML = `<i class="fas fa-hourglass-half text-lg"></i> Auto-jeda 5 detik...`;
+                                await sleep(5000); // JEDA OTOMATIS SELAMA 5 DETIK
+                                continue; // Coba lagi
+                            } else {
+                                throw new Error("Telah mencapai batas Limit API secara beruntun. Silakan klik tombol 'Susun Draf' kembali.");
+                            }
+                        }
+                        
+                        // Skenario 2: Ditolak Google (Bukan limit)
+                        if (!response.ok) {
+                            let errorSebab = `Status: ${response.status}`;
+                            try {
+                                const errData = await response.json();
+                                if (errData.error && errData.error.message) {
+                                    errorSebab = errData.error.message;
+                                }
+                            } catch(e) {}
+                            
+                            // Jika model tidak ditemukan, keluar dari 'while', pindah ke model berikutnya di 'for'
+                            if (response.status === 404 || errorSebab.toLowerCase().includes("not found") || errorSebab.toLowerCase().includes("not supported")) {
+                                console.warn(`Model ${model} ditolak. Pindah model...`);
+                                lastError = new Error(`Model ${model} tidak tersedia.`);
+                                break; 
+                            }
+                            
+                            // Error fatal lain (Kunci salah, blokir, dll)
+                            throw new Error(`Koneksi Ditolak Google. Alasan: <b>${errorSebab}</b>`);
+                        }
+
+                        // Skenario 3: Sukses
+                        dataAPI = await response.json();
+                        success = true;
+                    } catch (e) {
+                        lastError = e;
+                        // Jika bukan karena urusan model tidak ada atau auto-jeda, hentikan percobaan pada model ini
+                        if (!e.message.includes("tidak tersedia") && !e.message.includes("Auto-jeda")) {
+                            break;
+                        }
                     }
-                } catch(e) {}
-                throw new Error(`Koneksi Ditolak Google. Alasan: <b>${errorSebab}</b>`);
+                }
+                if (success) break;
             }
 
-            const dataAPI = await response.json();
+            if (!success) {
+                throw lastError || new Error("Semua versi model AI gratis gagal merespons.");
+            }
+
             const textResult = dataAPI.candidates[0].content.parts[0].text;
             const data = JSON.parse(textResult);
             
