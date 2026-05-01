@@ -235,7 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mendengarkan pasokan API Key dari Dashboard Portal
     window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SET_API_KEY') {
-            CURRENT_API_KEY = event.data.key;
+            // [PERBAIKAN] Otomatis menghapus spasi yang tidak sengaja terbawa saat copy-paste di HP
+            CURRENT_API_KEY = (event.data.key || "").trim();
             const badge = document.getElementById('api-status-badge');
             badge.className = "flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border shadow-sm bg-green-50 text-green-700 border-green-200 transition-colors duration-500";
             badge.innerHTML = '<i class="fas fa-link"></i> Portal Terhubung';
@@ -425,9 +426,20 @@ Struktur JSON: { "pengertian": "...", "tujuan": "...", "kebijakan": "...", "refe
 
             if (response.status === 429) {
                 laporLimitKePortal();
-                throw new Error("Limit API tercapai. Memutar ke API Key Cadangan... Silakan klik tombol generate sekali lagi.");
+                throw new Error("Limit API tercapai. Memutar ke API Key Cadangan... Silakan klik generate sekali lagi.");
             }
-            if (!response.ok) throw new Error("Terjadi gangguan koneksi dengan server AI.");
+            
+            // [PERBAIKAN] Detektor Error Asli dari Google
+            if (!response.ok) {
+                let errorSebab = `Status: ${response.status}`;
+                try {
+                    const errData = await response.json();
+                    if (errData.error && errData.error.message) {
+                        errorSebab = errData.error.message;
+                    }
+                } catch(e) {}
+                throw new Error(`Koneksi Ditolak Google. Alasan: <b>${errorSebab}</b>`);
+            }
 
             const dataAPI = await response.json();
             const textResult = dataAPI.candidates[0].content.parts[0].text;
